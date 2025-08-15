@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meme Hub</title>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: linear-gradient(to right, #ff9a9e, #fad0c4);
+    margin: 0;
+    padding: 0;
+}
+header {
+    background: #ff4081;
+    color: white;
+    padding: 15px;
+    text-align: center;
+    font-size: 26px;
+    font-weight: bold;
+}
+.container {
+    max-width: 800px;
+    margin: 20px auto;
+    background: white;
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+input, textarea {
+    width: 100%;
+    padding: 10px;
+    margin: 6px 0;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+}
+button {
+    background: #ff4081;
+    color: white;
+    padding: 10px 14px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+}
+button:hover {
+    background: #e73370;
+}
+.video-post {
+    border: 1px solid #ddd;
+    padding: 12px;
+    margin: 15px 0;
+    border-radius: 8px;
+    background: #fafafa;
+}
+.video-post iframe, .video-post video {
+    width: 100%;
+    border-radius: 6px;
+    margin-top: 8px;
+}
+.like-btn {
+    color: #ff4081;
+    font-weight: bold;
+    cursor: pointer;
+}
+.comment-box {
+    margin-top: 10px;
+}
+.comment {
+    background: #eee;
+    padding: 6px;
+    margin: 4px 0;
+    border-radius: 5px;
+}
+</style>
+</head>
+<body>
+
+<header>🎯 Meme Hub</header>
+
+<div class="container">
+    <!-- Admin Login -->
+    <div id="loginDiv">
+        <h3>🔑 Admin Login</h3>
+        <input type="password" id="adminPin" placeholder="Enter Admin PIN">
+        <button onclick="login()">Login</button>
+    </div>
+
+    <!-- Add Post -->
+    <div id="postDiv" style="display:none;">
+        <h3>➕ Add New Meme</h3>
+        <input type="text" id="videoTitle" placeholder="Video Title">
+        <input type="text" id="videoUrl" placeholder="Video URL (YouTube, TikTok, FB, Insta or MP4)">
+        <button onclick="addPost()">Post Meme</button>
+    </div>
+
+    <h3>📺 All Memes</h3>
+    <div id="posts"></div>
+</div>
+
+<script>
+let adminLogged = false;
+let posts = JSON.parse(localStorage.getItem('memePosts') || '[]');
+
+function login(){
+    const pin = document.getElementById('adminPin').value;
+    if(pin === "1234"){ // তোমার পছন্দমত PIN বসাও
+        adminLogged = true;
+        document.getElementById('loginDiv').style.display = 'none';
+        document.getElementById('postDiv').style.display = 'block';
+        alert("✅ Admin Logged In!");
+    } else {
+        alert("❌ Wrong PIN!");
+    }
+}
+
+function detectEmbed(url) {
+    if(url.includes("youtube.com") || url.includes("youtu.be")){
+        let videoId = url.split("v=")[1] || url.split("/").pop();
+        return `<iframe height="315" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allowfullscreen></iframe>`;
+    }
+    if(url.includes("tiktok.com")){
+        return `<blockquote class="tiktok-embed" cite="${url}" data-video-id="" style="max-width: 100%"></blockquote>
+        <script async src="https://www.tiktok.com/embed.js"></script>`;
+    }
+    if(url.includes("facebook.com") || url.includes("fb.watch")){
+        return `<iframe src="https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=false" width="100%" height="315" style="border:none;overflow:hidden" scrolling="no" frameborder="0" allowfullscreen></iframe>`;
+    }
+    if(url.includes("instagram.com")){
+        return `<blockquote class="instagram-media" data-instgrm-permalink="${url}" style="max-width:100%;"></blockquote>
+        <script async src="//www.instagram.com/embed.js"></script>`;
+    }
+    if(url.endsWith(".mp4") || url.endsWith(".webm")){
+        return `<video src="${url}" controls></video>`;
+    }
+    return `<a href="${url}" target="_blank">View Meme</a>`;
+}
+
+function renderPosts(){
+    const container = document.getElementById('posts');
+    container.innerHTML = '';
+    posts.slice().reverse().forEach((p, index) => {
+        let div = document.createElement('div');
+        div.className = 'video-post';
+        div.innerHTML = `
+            <h4>${p.title}</h4>
+            ${detectEmbed(p.url)}
+            <p><span class="like-btn" onclick="likePost(${index})">❤️ Like (${p.likes || 0})</span></p>
+            <div class="comment-box">
+                <input type="text" id="commentInput${index}" placeholder="Write a comment">
+                <button onclick="addComment(${index})">Comment</button>
+                <div id="comments${index}">
+                    ${(p.comments || []).map(c => `<div class="comment">${c}</div>`).join('')}
+                </div>
+            </div>
+        `;
+        container.appendChild(div);
+    });
+}
+
+function addPost(){
+    if(!adminLogged) return alert("Not authorized");
+    const title = document.getElementById('videoTitle').value.trim();
+    const url = document.getElementById('videoUrl').value.trim();
+    if(!title || !url) return alert("⚠ Please fill all fields");
+    posts.push({title, url, likes: 0, comments: []});
+    localStorage.setItem('memePosts', JSON.stringify(posts));
+    document.getElementById('videoTitle').value = '';
+    document.getElementById('videoUrl').value = '';
+    renderPosts();
+}
+
+function likePost(index){
+    posts[index].likes = (posts[index].likes || 0) + 1;
+    localStorage.setItem('memePosts', JSON.stringify(posts));
+    renderPosts();
+}
+
+function addComment(index){
+    const commentInput = document.getElementById('commentInput' + index);
+    const commentText = commentInput.value.trim();
+    if(commentText){
+        posts[index].comments = posts[index].comments || [];
+        posts[index].comments.push(commentText);
+        localStorage.setItem('memePosts', JSON.stringify(posts));
+        commentInput.value = '';
+        renderPosts();
+    }
+}
+
+renderPosts();
+</script>
+
+</body>
+</html>
